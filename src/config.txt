@@ -1,0 +1,91 @@
+# ============================================================
+# IMU configuration file
+# MODE:
+# 0 - Accelerometer calibration
+# 1 - Gyroscope calibration
+# 2 - Initial alignment
+# ============================================================
+
+MODE=0
+
+
+# ============================================================
+# Accelerometer calibration
+# ============================================================
+
+ACC_CALIBRATION_FILE_1=work/asc/calibration/X_up.ASC
+ACC_CALIBRATION_FILE_2=work/asc/calibration/X_down.ASC
+ACC_CALIBRATION_FILE_3=work/asc/calibration/Y_up.ASC
+ACC_CALIBRATION_FILE_4=work/asc/calibration/Y_down.ASC
+ACC_CALIBRATION_FILE_5=work/asc/calibration/Z_up.ASC
+ACC_CALIBRATION_FILE_6=work/asc/calibration/Z_down.ASC
+
+ACC_COMPENSATION_FILE_1=work/asc/calibration/X_up.ASC
+ACC_COMPENSATION_FILE_2=work/asc/calibration/X_down.ASC
+ACC_COMPENSATION_FILE_3=work/asc/calibration/Y_up.ASC
+ACC_COMPENSATION_FILE_4=work/asc/calibration/Y_down.ASC
+ACC_COMPENSATION_FILE_5=work/asc/calibration/Z_up.ASC
+ACC_COMPENSATION_FILE_6=work/asc/calibration/Z_down.ASC
+
+ACC_RESULT_FILE=work/results/calibration/AccCaliError.txt
+
+ACC_COMPENSATION_RESULT_1=work/results/calibration/X_up_Raw_Com.txt
+ACC_COMPENSATION_RESULT_2=work/results/calibration/X_down_Raw_Com.txt
+ACC_COMPENSATION_RESULT_3=work/results/calibration/Y_up_Raw_Com.txt
+ACC_COMPENSATION_RESULT_4=work/results/calibration/Y_down_Raw_Com.txt
+ACC_COMPENSATION_RESULT_5=work/results/calibration/Z_up_Raw_Com.txt
+ACC_COMPENSATION_RESULT_6=work/results/calibration/Z_down_Raw_Com.txt
+
+
+# ============================================================
+# Gyroscope calibration
+# ============================================================
+
+GYRO_ROTATION_FILE_1=work/asc/calibration/X_down_360.ASC
+GYRO_ROTATION_FILE_2=work/asc/calibration/X_down_-360.ASC
+GYRO_ROTATION_FILE_3=work/asc/calibration/Y_down_360.ASC
+GYRO_ROTATION_FILE_4=work/asc/calibration/Y_down_-360.ASC
+GYRO_ROTATION_FILE_5=work/asc/calibration/Z_down_360.ASC
+GYRO_ROTATION_FILE_6=work/asc/calibration/Z_down_-360.ASC
+
+GYRO_COMPENSATION_FILE_1=work/asc/calibration/X_down_360.ASC
+GYRO_COMPENSATION_FILE_2=work/asc/calibration/X_down_-360.ASC
+GYRO_COMPENSATION_FILE_3=work/asc/calibration/Y_down_360.ASC
+GYRO_COMPENSATION_FILE_4=work/asc/calibration/Y_down_-360.ASC
+GYRO_COMPENSATION_FILE_5=work/asc/calibration/Z_down_360.ASC
+GYRO_COMPENSATION_FILE_6=work/asc/calibration/Z_down_-360.ASC
+
+GYRO_STATIC_FILE_1=work/asc/calibration/X_up.ASC
+GYRO_STATIC_FILE_2=work/asc/calibration/X_down.ASC
+GYRO_STATIC_FILE_3=work/asc/calibration/Y_up.ASC
+GYRO_STATIC_FILE_4=work/asc/calibration/Y_down.ASC
+GYRO_STATIC_FILE_5=work/asc/calibration/Z_up.ASC
+GYRO_STATIC_FILE_6=work/asc/calibration/Z_down.ASC
+
+GYRO_RESULT_FILE=work/results/alignment/GyroCalibration.txt
+
+GYRO_ANGLE_RESULT_1=work/results/alignment/x+360_Angle.txt
+GYRO_ANGLE_RESULT_2=work/results/alignment/x-360_Angle.txt
+GYRO_ANGLE_RESULT_3=work/results/alignment/y+360_Angle.txt
+GYRO_ANGLE_RESULT_4=work/results/alignment/y-360_Angle.txt
+GYRO_ANGLE_RESULT_5=work/results/alignment/z+360_Angle.txt
+GYRO_ANGLE_RESULT_6=work/results/alignment/z-360_Angle.txt
+
+GYRO_COMPENSATION_RESULT_1=work/results/alignment/x+360_Raw_Com.txt
+GYRO_COMPENSATION_RESULT_2=work/results/alignment/x-360_Raw_Com.txt
+GYRO_COMPENSATION_RESULT_3=work/results/alignment/y+360_Raw_Com.txt
+GYRO_COMPENSATION_RESULT_4=work/results/alignment/y-360_Raw_Com.txt
+GYRO_COMPENSATION_RESULT_5=work/results/alignment/z+360_Raw_Com.txt
+GYRO_COMPENSATION_RESULT_6=work/results/alignment/z-360_Raw_Com.txt
+
+
+# ============================================================
+# Initial alignment
+# ============================================================
+
+ALIGNMENT_INPUT_FILE=work/asc/alignment/ReceivedTofile-COM6-2026_10_14_17-07-07.ASC
+
+ALIGNMENT_RESULT_WHOLE=work/results/alignment/Align_Whole.txt
+ALIGNMENT_RESULT_SECOND=work/results/alignment/Align_Second.txt
+ALIGNMENT_RESULT_EPOCH=work/results/alignment/Align_Epoch.txt
+ALIGNMENT_RESULT_NOISE=work/results/alignment/Align_Deviation.txt

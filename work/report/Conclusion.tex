@@ -1,0 +1,203 @@
+\section{实验总结}
+
+\subsection{技术总结}
+本次实验完成IMU的六位置加速度计标定、成对正反转陀螺标定，以及静态双矢量解析粗对准。主要结论如下：
+\begin{enumerate}[leftmargin=2em]
+\item 六位置静态均值建立了三轴加速度计的12参数线性模型，得到$X$、$Y$、$Z$轴零偏分别为$-0.004568$、$0.018717$、$-0.009161~\mathrm{m/s^2}$，对应比例因子误差约$2241$、$2268$、$2370$~ppm。校正后六位置均值残差的三轴RMS分别由$17.60$、$50.31$、$45.11$降为$1.54$、$1.09$、$0.20~\mathrm{mm/s^2}$。
+\item 角位置法得到三轴陀螺比例误差约为$-325$、$-366$、$-495$~ppm；静态两位置法估计零偏约为$-0.969$、$0.694$、$-0.431^\circ/\mathrm h$。等长完整转动窗是正反转差分消去公共项的必要前提。
+\item 对100C全段$376820$条有效观测作静态解析粗对准，得航向$87.624417^\circ$、俯仰$-0.006999^\circ$、横滚$-0.032026^\circ$。每秒均值解相对全段参考的航向RMS差约$0.979^\circ$，逐历元约$43.777^\circ$，证明短历元寻北对陀螺随机噪声十分敏感。
+\end{enumerate}
+
+\subsection{实习体会}
+通过本次惯性导航原理实验的学习与实践，我对惯性测量单元（IMU）的工作原理、误差特性及其在惯性导航系统中的作用有了更加深入的认识。通过加速度计六位置标定、陀螺仪误差标定以及静态解析粗对准等实验，我将课堂上学习的理论知识与实际数据处理过程结合起来，对惯性器件的零偏、比例因子误差、交轴耦合以及地球自转对初始对准的影响有了更加直观的理解。同时，通过对原始观测数据的整理、计算和分析，我也认识到，准确的数据处理和合理的误差补偿是保证惯性导航系统性能的重要基础。
+
+在实验过程中，我体会到了实际操作与理论计算之间的联系。无论是加速度计六位置标定中不同姿态下的比力观测，还是陀螺仪正反转过程中的角增量处理，都需要严格控制实验条件，并充分考虑坐标系定义、采样时间和数据有效性等因素。在静态解析粗对准实验中，我进一步理解了重力矢量和地球自转角速度矢量在确定初始姿态中的作用，也认识到不同观测时长对对准结果具有明显影响。此外，通过编写和调试C++程序，我进一步熟悉了从原始数据读取、误差参数估计到结果输出的完整处理流程，提高了利用程序解决实际工程问题的能力。
+
+本次实验也让我认识到，实验结果的合理性不能仅仅通过程序是否正常运行或计算结果是否收敛来判断，还需要结合惯性器件的工作原理、实际实验条件和理论预期进行综合分析。例如，实验数据中的异常变化需要结合设备状态和观测环境进行判断。这让我更加重视实验过程中的数据质量检查、结果验证和误差来源分析。通过本次实验，我不仅加深了对惯性导航相关理论知识的理解，也提高了动手操作、程序设计和分析问题的能力，为今后进一步开展组合导航及惯性测量相关研究打下了基础。
+
+% \section{程序实现与成果复现}
+% \begin{table}[htbp]\centering\small
+% \caption{C++功能文件与主要输出}\label{tab:codefiles}
+% \begin{tabularx}{\textwidth}{p{5.0cm}Y} \toprule
+% 源文件或配置 & 功能及输出\\ \midrule
+% \texttt{src/ReadFile.cpp} & 识别IMU消息、CRC校验、字段解析、轴序及增量系数换算\\
+% \texttt{src/ErrorCalibration.cpp} & 六位置静态标定、角位置正反转积分、补偿与结果输出\\
+% \texttt{src/CoarseAlignment.cpp} & 全段、每秒、逐历元双矢量定姿及角度差统计\\
+% \texttt{src/main.cpp}, \texttt{src/ReadConfig.cpp} & 程序入口、运行模式、文件路径及异常处理\\
+% \texttt{src/config.txt} & \texttt{MODE=0/1/2}分别执行加速度计标定、陀螺标定、静态粗对准\\
+% \texttt{work/results/} & 标定系数、积分角、补偿后时间序列和对准结果\\
+% \texttt{work/figures/} & 图像、统计JSON、独立绘图脚本及本报告新增的重绘脚本\\ \bottomrule
+% \end{tabularx}
+% \end{table}
+
+
+% IMU/
+% ├── src/                                      # C++ 源代码与配置
+% │   ├── CoarseAlignment.cpp
+% │   ├── config.txt
+% │   ├── ErrorCalibration.cpp
+% │   ├── IMU.h
+% │   ├── main.cpp
+% │   ├── ReadConfig.cpp
+% │   ├── ReadFile.cpp
+% │   └── output/
+% │
+% └── work/                                     # 数据、绘图、报告及计算结果
+%     ├── asc/                                  # 原始 ASC 数据
+%     │   ├── alignment/
+%     │   └── calibration/
+%     │
+%     ├── figures/                              # 报告图片、绘图脚本及统计数据
+%     │
+%     ├── report/                               
+%     │   ├── Analysis.tex
+%     │   ├── Conclusion.tex
+%     │   ├── cover.tex
+%     │   ├── IMU.tex
+%     │   ├── Introduction.tex
+%     │   ├── main.tex
+%     │   ├── package.tex
+%     │   ├── Understanding.tex
+%     │   └── build/                            
+%     │          
+%     ├── results/                              
+%         ├── alignment/
+%         └── calibration/
+     
+\section{程序运行与说明}
+\subsection{程序运行}
+
+程序通过配置文件\texttt{src/config.txt}控制运行模式，
+其中\texttt{MODE}参数用于选择不同的实验处理任务：
+
+\begin{enumerate}
+    \item \textbf{MODE=0：加速度计标定。}
+    读取六个位置的静态观测数据，计算各位置三轴比力均值，
+    建立加速度计误差模型，并估计零偏、比例因子及交轴耦合参数。
+
+    \item \textbf{MODE=1：陀螺仪标定。}
+    读取静态及角位置标定数据，通过正反转角增量积分和静态观测分析，
+    估计陀螺仪零偏与比例因子误差，并输出相应标定结果。
+
+    \item \textbf{MODE=2：静态解析粗对准。}
+    读取100C惯性测量单元的静态观测数据，
+    利用重力矢量和地球自转角速度矢量构建双矢量定姿模型，
+    分别计算全段、每秒及逐历元姿态解，并统计不同解算结果之间的差异。
+\end{enumerate}
+
+运行前，根据实验任务检查配置文件中的数据路径及运行模式，
+使用项目原有C++工程配置完成编译。
+程序应从项目根目录运行，以保证相对路径正确解析。
+各模式运行后，计算结果分别保存在
+\texttt{work/results/calibration/}和
+\texttt{work/results/alignment/}目录下。
+
+\subsection{程序说明}
+\subsubsection{程序模块与功能划分}
+本实验采用C++实现IMU原始观测数据读取、惯性器件误差标定及静态解析粗对准等功能。程序按照功能模块进行组织，各源文件之间通过统一的数据结构和函数接口进行调用。
+主要源文件及其功能如表\ref{tab:codefiles}所示。
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.30}
+\setlength{\tabcolsep}{7pt}
+\caption{C++程序功能文件与主要输出}
+\label{tab:codefiles}
+\begin{tabularx}{\textwidth}{
+    @{}
+    >{\raggedright\arraybackslash}p{5.2cm}
+    >{\raggedright\arraybackslash}X
+    @{}
+}
+\toprule
+源文件或目录 & 功能及输出\\
+\midrule
+
+\multicolumn{2}{l}{\textbf{（1）程序源文件与配置}}\\
+\midrule
+
+\texttt{src/IMU.h}
+& 定义IMU数据结构、观测字段、相关常量及函数接口\\
+
+\texttt{src/ReadFile.cpp}
+& 识别IMU消息、CRC校验、字段解析、轴序及增量系数换算\\
+
+\texttt{src/ReadConfig.cpp}
+& 读取配置文件，解析程序运行模式及相关参数\\
+
+\texttt{src/ErrorCalibration.cpp}
+& 六位置静态标定、角位置正反转积分、误差补偿与结果输出\\
+
+\texttt{src/CoarseAlignment.cpp}
+& 全段、每秒及逐历元双矢量定姿和角度差统计\\
+
+\texttt{src/main.cpp}
+& 程序入口，完成运行模式选择及各功能模块的调用\\
+
+\texttt{src/config.txt}
+& 通过\texttt{MODE=0/1/2}分别执行加速度计标定、陀螺标定和静态粗对准\\
+
+\texttt{src/output/}
+& 存放编译生成的可执行程序\\
+
+\midrule
+\multicolumn{2}{l}{\textbf{（2）数据、结果与报告目录}}\\
+\midrule
+
+\texttt{work/asc/}
+& 存放实验采集的原始ASC数据，包含标定和初始对准数据\\
+
+\texttt{work/results/}
+& 存放标定系数、积分角、补偿后时间序列及初始对准结果\\
+
+\texttt{work/figures/}
+& 存放实验图像、统计数据及Python绘图脚本\\
+
+\texttt{work/report/}
+& 存放报告LaTeX源码、相关图片及编译文件\\
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection{项目目录结构}
+
+整个项目按照程序源代码、原始观测数据、计算结果及报告文件进行分类组织，主要目录结构如下：
+
+\begin{verbatim}
+IMU/
+|-- src/                         # C++源代码与配置
+|   |-- CoarseAlignment.cpp
+|   |-- config.txt
+|   |-- ErrorCalibration.cpp
+|   |-- IMU.h
+|   |-- main.cpp
+|   |-- ReadConfig.cpp
+|   |-- ReadFile.cpp
+|   `-- output/                   # 编译生成的可执行程序
+|
+`-- work/                         # 实验数据、结果及报告
+    |-- asc/                      # 原始ASC数据
+    |   |-- alignment/
+    |   `-- calibration/
+    |
+    |-- figures/                  # 图片、统计数据及绘图脚本
+    |
+    |-- report/                   # LaTeX报告源码
+    |   |-- Analysis.tex
+    |   |-- Conclusion.tex
+    |   |-- cover.tex
+    |   |-- IMU.tex
+    |   |-- Introduction.tex
+    |   |-- main.tex
+    |   |-- package.tex
+    |   |-- Understanding.tex
+    |   `-- build/                # LaTeX编译生成文件
+    |
+    `-- results/                  # 实验计算结果
+        |-- alignment/
+        `-- calibration/
+\end{verbatim}
+
+
+

@@ -1,0 +1,30 @@
+# 默认忽略项目根目录下的所有文件和目录
+/*
+
+# 保留仓库配置和说明
+!/.gitignore
+!/README.md
+
+# 保留源代码和实验资料
+!/src/
+!/Experiment1/
+
+# 允许进入 work 目录，但默认忽略其下的内容
+!/work/
+/work/*
+
+# 保留指定的 work 子目录
+!/work/asc/
+!/work/figures/
+!/work/report/
+!/work/results/
+
+# 忽略压缩包、Python 缓存
+*.rar
+*.zip
+*.pyc
+__pycache__/
+
+# 报告构建目录只保留最终 PDF
+/work/report/build/*
+!/work/report/build/main.pdf
