@@ -27,7 +27,7 @@
 *.zip
 *.pyc
 __pycache__/
-
+*.tex
 # 报告构建目录只保留最终 PDF
 /work/report/build/*
 !/work/report/build/main.pdf
