@@ -8,10 +8,13 @@
 # 保留源代码和实验资料
 !/src/
 !/Experiment1/
+/Experiment1/data/*
 
 # 允许进入 work 目录，但默认忽略其下的内容
 !/work/
 /work/*
+/work/asc/calibration/*
+/work/asc/alignment/*
 
 # 保留指定的 work 子目录
 !/work/asc/
