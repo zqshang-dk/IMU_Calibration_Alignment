@@ -1,8 +1,4 @@
-#pragma once
 #include <iostream>
-#include <algorithm>
-#include <stdexcept>
-#include <cstdint>
 #include <cmath>
 #include <iomanip>
 #include <string>
@@ -26,15 +22,17 @@ using namespace Eigen;
 #define Latitude         (30.531651244 * deg2rad)
 #define Circle           360.0
 #define gp               9.7936174         // 当地的重力加速度，M/S2
-// 本批数据：标定为 NovAtel-FSAS，对准为 NovAtel-100C，均为 200 Hz。
-// 保留原接口名称；计数系数统一为 (m/s)/count 和 rad/count。
-constexpr double FNSC = 200.0;
-constexpr double FXWG = 200.0;
-constexpr double AS_NSC = 2.0e-8;
-constexpr double GS_NSC = 1.0e-9;
-constexpr double AS_XWG = 0.05 / 32768.0;
-constexpr double GS_XWG = (0.1 / (3600.0 * 256.0)) * deg2rad;
-constexpr double StaticTrimSeconds = 5.0;
+
+// NoVATel SPAN-100c
+#define FNSC 200.0;
+#define FXWG 100.0;
+#define AS_NSC 2.0E-8;
+#define GS_NSC 1.0E-9;
+#define AS_XWG 1.5258789063e-6;
+#define GS_XWG 1.0850694444e-7;
+
+#define Increment 0.00018        // 初始对准时间间隔(秒)
+#define Datatime 40.00          // 读取数据时长
 //GPStime的结构体
 struct GPSTIME{
 	int Week;
@@ -148,11 +146,6 @@ struct GyroCalibrationModule{
 	GyroSensor prevgyro;
 	GyroSensor posangle;
 	GyroSensor negangle;
-    GyroSensor staticUp;       // rad/s，不与正反转积分角混用
-    GyroSensor staticDown;
-    bool hasStaticUp = false;
-    bool hasStaticDown = false;
-    int verticalSign = -1;     // 本批 *_down_*：敏感轴朝下
 	double posT;
 	double negT;
 	double bias[3];             // 内部统一 rad/s；输出时才转 deg/h
@@ -232,16 +225,13 @@ struct AppConfig
 // 读取配置文件
 bool LoadConfig(const string& filename, AppConfig& config);
 bool ReadFile(ifstream &file, ASCData &data);
-vector<ASCData> ReadRecords(ifstream& file, FileType type);
 void CalculateFMean(ifstream& FilePath,ASCData& data,int pos,AcceCalibrationModule& cali);
 void AcceCalibration(AcceCalibrationModule &cali, ofstream &resfile);
 void CompensateAcc(ifstream &FilePath, ASCData &data, AcceCalibrationModule &cali, ofstream &resfile);
-void CalculateRotAnglePair(ifstream& positive, ifstream& negative, int axis,
-    GyroCalibrationModule& gyro, ofstream& positiveOutput, ofstream& negativeOutput);
+void CalculateRotAngle(ifstream &FilePath, ASCData data, int mode, int Axis, GyroCalibrationModule &gyro, ofstream &gyroresfile);
 void GyroCalibration(int Axis, GyroCalibrationModule &cali, int mode);
 void CalculateGyroBias(ifstream &FilePath, ASCData &data, GyroCalibrationModule &cali, int mode);
 void CompensateGyro(ifstream &FilePath, ASCData &data, int mode, GyroCalibrationModule &cali, ofstream &gyroresFile);
-
 double GetDiffTime(GPSTIME &t1, GPSTIME &t2);
 void CalculateCbn(AlignModule &align);
 void EpochAlign(ifstream &FilePath, ASCData data, AlignModule &now, AlignModule &total, ofstream &alignfile);

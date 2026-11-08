@@ -1,151 +1,203 @@
+//惯性导航初始粗对准
 #include "IMU.h"
+using namespace std;
+using namespace Eigen;
+double GetDiffTime(GPSTIME& t1,GPSTIME& t2){
+    return (t2.Week - t1.Week) * 604800 + (t2.SOW - t1.SOW);
+}
+void CalculateCbn(AlignModule& align){
+    // 将加速度计和陀螺仪数据转换为向量形式
+	Vector3d gb = Vector3d::Zero(3, 1);	// 比力
+	Vector3d wb = Vector3d::Zero(3, 1);	// 角速度
+    Vector3d v = Vector3d::Zero(3, 1);  // 计算叉乘辅助向量
 
-double GetDiffTime(GPSTIME& first, GPSTIME& now) {
-    return (now.Week - first.Week) * 604800.0 + now.SOW - first.SOW;
+    for (int i = 0; i < 3; i++)
+	{
+		gb(i) = -align.fmean[i];
+		wb(i) = align.anglevelocitymean[i];
+	}
+	v = gb.cross(wb);	// 叉乘计算
+	
+	// 定义导航坐标系下的参考向量
+	Vector3d gn(0.0, 0.0, gp);	// 重力加速度向量
+	Vector3d wn(OMEGA* rad2deg* cos(Latitude), 0.0, -OMEGA* rad2deg * sin(Latitude));	// 地球自转角速度向量
+
+	// 构造载体坐标系下的正交基
+	Vector3d wg = gb.normalized();	// 单位化比力向量
+	Vector3d ww = v.normalized();
+	Vector3d wgw = (v.cross(gb)).normalized();
+
+	Vector3d vg = gn.normalized();	// 单位化重力向量
+	Vector3d vw = (gn.cross(wn)).normalized();
+	Vector3d vgw = ((gn.cross(wn)).cross(gn)).normalized();
+
+	// 构造矩阵并计算姿态矩阵
+	MatrixXd V = MatrixXd(3, 3); V.setZero();	// 导航系正交基矩阵
+	V.col(0) = vg; V.col(1) = vw; V.col(2) = vgw;
+	MatrixXd W = MatrixXd(3, 3); W.setZero();	// 载体系正交基矩阵
+	W.col(0) = wg; W.col(1) = ww; W.col(2) = wgw;
+
+	align.Cbn = V * W.transpose();	// 计算姿态矩阵
+
+	align.AttitudeAngle();	// 提取姿态角
 }
 
-void CalculateCbn(AlignModule& align) {
-    Vector3d gravity, omega;
-    for (int j = 0; j < 3; ++j) {
-        gravity[j] = -align.fmean[j];
-        omega[j] = align.anglevelocitymean[j];
-    }
-    const Vector3d cross = gravity.cross(omega);
-    if (!gravity.allFinite() || !omega.allFinite() || gravity.norm() < 1e-12 ||
-        cross.norm() < 1e-12 || abs(cos(Latitude)) < 1e-12)
-        throw runtime_error("Degenerate vectors in static alignment");
-    const Vector3d down = gravity.normalized();
-    const Vector3d east = cross.normalized();
-    const Vector3d north = east.cross(down).normalized();
-    align.Cbn.row(0) = north.transpose();
-    align.Cbn.row(1) = east.transpose();
-    align.Cbn.row(2) = down.transpose();
-    align.AttitudeAngle(); // 内部弧度；输出列明确转为度
-}
-
-namespace {
-struct DifferenceStats {
-    Vector3d squares = Vector3d::Zero(), maximum = Vector3d::Zero();
-    size_t n = 0;
-    void add(const AlignModule& now, const AlignModule& ref) {
-        Vector3d error(now.yaw - ref.yaw, now.pitch - ref.pitch, now.roll - ref.roll);
-        for (int j = 0; j < 3; ++j) {
-            error[j] = remainder(error[j], 2 * PI) * rad2deg;
-            squares[j] += error[j] * error[j];
-            maximum[j] = max(maximum[j], abs(error[j]));
-        }
-        ++n;
-    }
-    void write(ofstream& out) const {
-        if (!n) throw runtime_error("No alignment solutions");
-        out << "%Count=" << n << "\n%RMS_difference_to_whole(deg):";
-        for (int j = 0; j < 3; ++j) out << (j ? "," : "") << sqrt(squares[j] / n);
-        out << "\n%Max_abs_difference_to_whole(deg):";
-        for (int j = 0; j < 3; ++j) out << (j ? "," : "") << maximum[j];
-        out << '\n';
-    }
-};
-
-void Angles(ofstream& out, const AlignModule& align) {
-    out << fixed << setprecision(12) << align.yaw * rad2deg << ','
-        << align.pitch * rad2deg << ',' << align.roll * rad2deg;
-}
-
-void Add(const ASCData& row, Vector3d& force, Vector3d& omega) {
-    for (int j = 0; j < 3; ++j) {
-        force[j] += row.acce.acce[j];
-        omega[j] += row.gyro.gyro[j];
-    }
-}
-
-void SolveMeanAttitude(const Vector3d& force, const Vector3d& omega, size_t count, AlignModule& align) {
-    if (!count) throw runtime_error("Empty alignment interval");
-    for (int j = 0; j < 3; ++j) {
-        align.fmean[j] = force[j] / count;
-        align.anglevelocitymean[j] = omega[j] / count;
-    }
-    CalculateCbn(align);
-}
-}
-
-void EpochAlign(ifstream& file, ASCData, AlignModule& now, AlignModule& total, ofstream& out) {
-    DifferenceStats stats;
-    out << "%Time_sow(s),Yaw,Pitch,Roll(deg)\n";
-    for (const auto& row : ReadRecords(file, ALIGNMENT)) {
-        Vector3d force = Vector3d::Zero(), omega = Vector3d::Zero();
-        Add(row, force, omega);
-        now.time = row.time;
-        SolveMeanAttitude(force, omega, 1, now);
-        stats.add(now, total);
-        out << fixed << setprecision(9) << now.time.SOW << ',';
-        Angles(out, now);
-        out << '\n';
-    }
-    stats.write(out);
-}
-
-void SecondAlign(ifstream& file, ASCData, AlignModule& now, AlignModule& total, ofstream& out) {
-    const auto rows = ReadRecords(file, ALIGNMENT);
-    GPSTIME origin = rows.front().time;
-    Vector3d force = Vector3d::Zero(), omega = Vector3d::Zero();
-    size_t count = 0;
-    int bin = 0;
-    DifferenceStats stats;
-    out << "%Window_center_relative(s),Yaw,Pitch,Roll(deg),Samples\n";
-    auto flush = [&]() {
-        // 允许少量缺测；严重缺测和末尾不足1秒的窗口不计入每秒结果。
-        if (count >= static_cast<size_t>(FNSC) - 2) {
-            SolveMeanAttitude(force, omega, count, now);
-            stats.add(now, total);
-            out << fixed << setprecision(3) << bin + 0.5 << ',';
-            Angles(out, now);
-            out << ',' << count << '\n';
-        }
-    };
-    for (const auto& row : rows) {
-        GPSTIME time = row.time;
-        const int current = static_cast<int>(floor((GetDiffTime(origin, time) + 1e-7)));
-        if (current != bin) {
-            flush();
-            bin = current;
-            count = 0;
-            force.setZero();
-            omega.setZero();
-        }
-        // 边界样本进入下一秒，绝不在刷新时丢掉。
-        Add(row, force, omega);
-        now.time = row.time;
-        ++count;
-    }
-    if (GetDiffTime(origin, now.time) + 1.0 / FNSC >= bin + 1.0 - 1e-7) flush();
-    stats.write(out);
-}
-
-void AllAlign(ifstream& file, ASCData& data, AlignModule& align, ofstream& out) {
+//先对每个历元进行粗对准
+void EpochAlign(ifstream& FilePath,ASCData data,AlignModule& now,AlignModule& total,ofstream& alignfile){
     data.ft = ALIGNMENT;
-    const auto rows = ReadRecords(file, ALIGNMENT);
-    Vector3d force = Vector3d::Zero(), omega = Vector3d::Zero();
-    for (const auto& row : rows) Add(row, force, omega);
-    SolveMeanAttitude(force, omega, rows.size(), align);
-    out << "%Yaw,Pitch,Roll(deg)\n";
-    Angles(out, align);
-    out << "\n%Count=" << rows.size() << "\n%C_body_to_NED\n" << align.Cbn
-        << "\n%Orthogonality_F=" << (align.Cbn * align.Cbn.transpose() - Matrix3d::Identity()).norm()
-        << "\n%Determinant=" << align.Cbn.determinant() << '\n';
+    //初始化加速度计和陀螺仪数据的均值
+    double accemean[3] = {0.0, 0.0, 0.0};
+    double anglevelmean[3] = {0.0, 0.0, 0.0};
+    double epochnum = 0.0;
+    double RMSE[3] = {0.0, 0.0, 0.0};
+
+    while(ReadFile(FilePath,data)){
+        now.time = data.time;
+
+        now.fmean[0] = data.acce.rax;
+        now.fmean[1] = data.acce.ray;
+        now.fmean[2] = data.acce.raz;
+
+        now.anglevelocitymean[0] = data.gyro.rgx;
+        now.anglevelocitymean[1] = data.gyro.rgy;
+        now.anglevelocitymean[2] = data.gyro.rgz;
+        epochnum++;
+        //计算姿态矩阵
+        CalculateCbn(now);
+        RMSE[0] += pow(now.yaw - total.yaw, 2);
+        RMSE[1] += pow(now.pitch - total.pitch, 2);
+        RMSE[2] += pow(now.roll - total.roll, 2);
+
+        alignfile << fixed << setprecision(12);
+        alignfile << now.time.SOW << ",";
+        alignfile << now.yaw << "," << now.pitch << "," << now.roll << endl;
+    }
+    for (int i = 0; i < 3;i++){
+        RMSE[i] = sqrt(RMSE[i] / epochnum);
+    }
 }
 
-void CalTimeNoise(ifstream& file, ASCData& data, ofstream& out) {
+//每秒进行粗对准
+void SecondAlign(ifstream& FilePath,ASCData data,AlignModule& now,AlignModule& total,ofstream& alignfile){
     data.ft = ALIGNMENT;
-    const auto rows = ReadRecords(file, ALIGNMENT);
-    // 陀螺零偏0.05 deg/h；ARW 0.005 deg/sqrt(h)。输出是航向误差量级，单位deg。
-    const double earthHorizontalDegH = OMEGA * rad2deg * 3600 * cos(Latitude);
-    out << "%Bias_heading(deg):" << fixed << setprecision(12)
-        << 0.05 / earthHorizontalDegH * rad2deg << "\n%Time(s),WhiteNoise_heading(deg)\n";
-    GPSTIME origin = rows.front().time;
-    for (size_t i = 1; i < rows.size(); ++i) {
-        GPSTIME time = rows[i].time;
-        const double seconds = GetDiffTime(origin, time);
-        const double noise = (0.005 / sqrt(seconds / 3600.0)) / earthHorizontalDegH * rad2deg;
-        out << setprecision(6) << seconds << ',' << setprecision(12) << noise << '\n';
+    double accemean[3] = {0.0, 0.0, 0.0};
+    double anglevelmean[3] = {0.0, 0.0, 0.0};
+    double epochnum = 0.0;
+    double RMSE[3] = {0.0, 0.0, 0.0};
+    double dt = 0.0;
+    double totaltime = 0.0;
+    int T = 0;
+
+    while(ReadFile(FilePath,data)){
+        now.time = data.time;
+        if(epochnum!=0){
+            dt = GetDiffTime(now.prevtime, now.time);
+        }
+        totaltime += dt;
+        if(fabs(totaltime-1.0)>1e-3){
+            accemean[0] += data.acce.rax;
+            accemean[1] += data.acce.ray;
+            accemean[2] += data.acce.raz;
+
+            anglevelmean[0] += data.gyro.rgx;
+            anglevelmean[1] += data.gyro.rgy;
+            anglevelmean[2] += data.gyro.rgz;
+
+            epochnum++;
+        }
+        else if(fabs(totaltime-1.0)<1e-3){
+            for (int i = 0; i < 3;i++){
+                now.fmean[i] = accemean[i] / epochnum;
+                now.anglevelocitymean[i] = anglevelmean[i] / epochnum;
+            }
+            CalculateCbn(now);
+            RMSE[0] += pow(now.yaw - total.yaw, 2);
+            RMSE[1] += pow(now.pitch - total.pitch, 2);
+            RMSE[2] += pow(now.roll - total.roll, 2);
+
+            T++;
+
+            alignfile << T << ",";
+            alignfile << fixed << setprecision(12);
+            alignfile << now.yaw << "," << now.pitch << "," << now.roll << endl;
+
+            for (int i = 0; i < 3;i++){
+                accemean[i] = 0.0;
+                anglevelmean[i] = 0.0;
+            }
+            totaltime = 0.0;
+            epochnum = 1e-13;
+        }
+        now.prevtime = now.time;
     }
+    for (int i = 0; i < 3;i++){
+        RMSE[i] = sqrt(RMSE[i] / T);
+    }
+}
+
+void AllAlign(ifstream& FilePath, ASCData& data, AlignModule& align, ofstream& alignres){
+    data.ft = ALIGNMENT;
+	// 初始化加速度计和陀螺仪数据的均值
+	double accemean[3] = { 0.0,0.0,0.0 };	// [0.0, 0.0, 0.0]
+	double anglevelmean[3] = { 0.0,0.0,0.0 };
+	double epochnum = 0.0;
+
+	// 循环读取数据
+	while (ReadFile(FilePath, data))
+	{
+		accemean[0] += data.acce.rax;
+		accemean[1] += data.acce.ray;
+		accemean[2] += data.acce.raz;
+
+		anglevelmean[0] += data.gyro.rgx;	// 角速度
+		anglevelmean[1] += data.gyro.rgy;	// 角速度
+		anglevelmean[2] += data.gyro.rgz;	// 角速度
+
+		epochnum += 1.0;
+	}
+	// 求均值
+	for (int i = 0; i < 3; i++)
+	{
+		align.fmean[i] = accemean[i] / epochnum;
+		align.anglevelocitymean[i] = anglevelmean[i] / epochnum;
+	}
+
+	// 计算姿态矩阵
+	CalculateCbn(align);
+
+	alignres << fixed << setprecision(12);
+	alignres << align.yaw << "," << align.pitch << "," << align.roll << endl;
+
+	cout << "\nWhole-dataset coarse alignment completed. " << "The attitude results have been compared with the reference.\n";
+}
+
+/* 计算时间噪声特性 */
+void CalTimeNoise(ifstream& FilePath, ASCData& data, ofstream& alignres){
+    data.ft = ALIGNMENT;
+	alignres << "%Bias(deg): " << fixed << setprecision(12) <<  ((0.05 / 3600.0) / (OMEGA * cos(Latitude))) << endl;
+	alignres << "%Time(s),WhiteNoise(deg):\n";
+
+	// 初始化加速度计和陀螺仪数据的均值
+	double t0 = 0.0, totalt = 0;
+	double epochnum = 0.0;
+
+	// 循环读取数据
+	while (ReadFile(FilePath, data))
+	{
+		if (epochnum == 0) { 
+            t0 = data.time.Week * 604800 + data.time.SOW;
+        }	// 获取初始时间
+		epochnum++;
+		totalt = data.time.Week * 604800 + data.time.SOW - t0;
+		if (epochnum == 1){
+            continue;
+        }	// 跳过totalt为0的情况
+
+		alignres << fixed << setprecision(4);
+		alignres << totalt << ",";
+		alignres << fixed << setprecision(12);
+		alignres <<  ((0.005 / 3600.0) / ((OMEGA * cos(Latitude)) * sqrt(totalt))) << endl;
+	}
+
+	cout << "\nTime-noise analysis completed. " << "The results have been compared with the reference.\n";
 }
